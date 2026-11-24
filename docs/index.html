@@ -109,6 +109,7 @@ table.st th:first-child,table.st td:first-child{text-align:left;position:sticky;
 table.st td{padding:6px 9px;border-bottom:1px solid var(--line-soft);text-align:right;white-space:nowrap}
 table.st td:first-child{font-weight:500;color:var(--fg)}
 table.st td.mut{color:var(--fg-3)}
+table.st td.mut[colspan]{text-align:left}
 table.st tr.tot td{border-top:1px solid var(--line);border-bottom:0;font-weight:600}
 table.st tbody tr:hover td{background:var(--surface-2)}
 .comp{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px 28px}
@@ -187,7 +188,7 @@ footer{font-size:12px;color:var(--fg-3);max-width:90ch}
         </div></div>
       <div class="legend" id="lg-dep"></div>
       <div class="cv"><canvas id="c-dep" aria-label="Quarterly median price per chip generation"></canvas></div>
-      <div class="note">Quarterly median of undamaged sale ads for each generation at the chosen tier. Quarters with fewer than 3 priced ads are left as gaps.</div>
+      <div class="note">Quarterly median of undamaged sale ads for each generation at the chosen tier. Quarters with fewer than 3 priced ads are left as gaps. The legend shows the spec-adjusted depreciation per year (see Statistics).</div>
     </div>
     <div class="card">
       <div class="hd"><h2>Median price by chip</h2><span class="note">bar label = listings</span></div>
@@ -250,6 +251,11 @@ footer{font-size:12px;color:var(--fg-3);max-width:90ch}
         <div class="tw"><table class="st" id="st-dmg"></table></div>
         <div class="note">Each damaged ad's price is compared with the median undamaged price for the same chip and RAM (needs 2+ undamaged ads). SD is in percentage points (pp).</div>
       </div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Depreciation per year</h2><span class="note">undamaged sale ads · change in price per year of listing date</span></div>
+      <div class="tw"><table class="st" id="st-dep"></table></div>
+      <div class="note">Fitted as log(price) against listing date, so the rate is a compound % per year. <b>Raw</b> uses the date alone. <b>Spec-adjusted</b> also holds RAM and storage constant, so a shift towards bigger configurations later in a chip's life doesn't hide its depreciation. The pooled row also holds the chip constant. Half-life is the years taken to lose half the value at the adjusted rate. Prices are nominal rand, so SA inflation (about 5% a year) offsets part of the real loss.</div>
     </div>
     <div class="card">
       <div class="hd"><h2>Composition</h2><span class="note">% of sale and trade ads in the filter · hover for the 95% interval</span></div>
@@ -442,7 +448,7 @@ function drawDep(sale){
   const present = gens.filter(g => und.some(d => d.gen===g));
   const ds = present.map(g => { const i = gens.indexOf(g); return { label:g, data: quarters.map(Q => { const a = und.filter(d => d.gen===g && q(d.date)===Q).map(priceOf); return a.length>=3 ? median(a) : null; }),
     borderColor:cols[i], backgroundColor:cols[i], borderWidth:2, pointRadius:3, pointHoverRadius:6, pointBorderColor:css("--surface"), pointBorderWidth:1.5, spanGaps:false, tension:.2 }; });
-  document.getElementById("lg-dep").innerHTML = ds.length ? present.map((g) => `<span><i class="line" style="background:${cols[gens.indexOf(g)]}"></i>${g} ${depTier==="Base"?"":depTier}</span>`).join("") : `<span>No undamaged ${depTier} listings match the filters.</span>`;
+  document.getElementById("lg-dep").innerHTML = ds.length ? present.map((g) => `<span><i class="line" style="background:${cols[gens.indexOf(g)]}"></i>${g} ${depTier==="Base"?"":depTier}${(r => depOK(r) ? ` <b style="font-weight:600">${fmtPA(r.adj)}</b>` : "")(depRate(und.filter(d => d.gen===g)))}</span>`).join("") : `<span>No undamaged ${depTier} listings match the filters.</span>`;
   const o = baseOpts();
   o.scales.y.ticks.callback = v => fmtK(v); o.scales.y.min = 0;
   o.scales.x.grid.display = false; o.scales.x.ticks.autoSkip = false; o.scales.x.ticks.maxRotation = 0;
@@ -592,6 +598,50 @@ function buildGroupBy(){
     b.setAttribute("aria-pressed", k===groupBy); b.onclick = () => { groupBy = k; buildGroupBy(); drawStats(); }; el.appendChild(b); });
 }
 
+// ---------- depreciation per year (log-linear regression on listing date) ----------
+// Ordinary least squares; columns with no variation are dropped so the fit never goes singular. Column 1 is always time.
+function linfit(X, y){
+  const n = X.length; if(!n) return null;
+  const keep = X[0].map((_,j) => j < 2 || X.some(r => r[j] !== X[0][j]));
+  X = X.map(r => r.filter((_,j) => keep[j])); const k = X[0].length;
+  if(n < k + 3) return null;
+  const A = Array.from({length:k}, (_,i) => Array.from({length:2*k}, (_,j) => j < k ? sum(X.map(r => r[i]*r[j])) : (j-k === i ? 1 : 0)));
+  for(let c=0;c<k;c++){ let p = c; for(let r=c+1;r<k;r++) if(Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    if(Math.abs(A[p][c]) < 1e-10) return null; [A[c],A[p]] = [A[p],A[c]]; const v = A[c][c]; A[c] = A[c].map(x => x/v);
+    for(let r=0;r<k;r++) if(r !== c){ const f = A[r][c]; if(f) A[r] = A[r].map((x,j) => x - f*A[c][j]); } }
+  const inv = A.map(r => r.slice(k)), Xty = Array.from({length:k}, (_,i) => sum(X.map((r,m) => r[i]*y[m])));
+  const b = inv.map(r => sum(r.map((v,j) => v*Xty[j])));
+  const res = X.map((r,m) => y[m] - sum(r.map((v,j) => v*b[j]))), ssr = sum(res.map(e => e*e)), my = mean(y), sst = sum(y.map(v => (v-my)**2));
+  const df = n - k, se = Math.sqrt(ssr/df * inv[1][1]);
+  return { slope:b[1], se, df, r2: sst ? 1 - ssr/sst : null };
+}
+const DEP_T0 = Date.parse("2020-11-10");
+function depRate(ds, withChip = false){
+  const rows = ds.map(d => ({t:(Date.parse(d.date)-DEP_T0)/31557600000, y:Math.log(priceOf(d)), d})).filter(r => r.y > 0);
+  if(!rows.length) return null;
+  const ts = rows.map(r => r.t), span = Math.max(...ts) - Math.min(...ts);
+  const raw = linfit(rows.map(r => [1, r.t]), rows.map(r => r.y));
+  const sp = rows.filter(r => r.d.ram && r.d.storage), chips = [...new Set(sp.map(r => r.d.chip))];
+  const adj = linfit(sp.map(r => [1, r.t, Math.log2(r.d.ram), Math.log2(r.d.storage), ...(withChip ? chips.slice(1).map(c => +(r.d.chip === c)) : [])]), sp.map(r => r.y));
+  const pa = f => f ? (Math.exp(f.slope) - 1) * 100 : null;
+  const ci = f => f ? [(Math.exp(f.slope - tcrit(f.df)*f.se) - 1)*100, (Math.exp(f.slope + tcrit(f.df)*f.se) - 1)*100] : null;
+  return { n:rows.length, nAdj:sp.length, span, first:rows.reduce((a,r) => r.d.date < a ? r.d.date : a, "9"), last:rows.reduce((a,r) => r.d.date > a ? r.d.date : a, ""),
+    raw:pa(raw), adj:pa(adj), ci:ci(adj), r2:adj ? adj.r2 : null, half: adj && adj.slope < 0 ? Math.log(.5)/adj.slope : null };
+}
+const depOK = r => r && r.n >= 8 && r.span >= .75 && r.adj != null;
+const fmtPA = v => v==null ? "–" : (v > 0 ? "+" : "") + pct(v) + "/yr";
+function drawDepTable(priced){
+  const und = priced.filter(d => d.sevIdx === 0);
+  const row = (label, r, cls="") => !depOK(r)
+    ? `<tr class="${cls}"><td>${esc(label)}</td><td>${r ? r.n : 0}</td><td class="mut" colspan="6">${!r || r.n < 8 ? "fewer than 8 undamaged ads" : r.span < .75 ? "listed over less than 9 months" : "specs don't vary enough to fit"}</td></tr>`
+    : `<tr class="${cls}"><td>${esc(label)}</td><td>${r.n.toLocaleString()}</td><td>${r.first.slice(0,7)} – ${r.last.slice(0,7)}</td><td>${fmtPA(r.raw)}</td><td><b>${fmtPA(r.adj)}</b></td>
+       <td>${pct(r.ci[0],0)} – ${pct(r.ci[1],0)}</td><td>${pct(r.r2*100,0)}</td><td>${r.half ? num(r.half,1) + " yrs" : "–"}</td></tr>`;
+  const chips = CHIP_ORDER.filter(c => und.some(d => d.chip === c));
+  const all = depRate(und.filter(d => d.chip), true);
+  document.getElementById("st-dep").innerHTML = `<thead><tr><th>Chip</th><th>n</th><th>Listed</th><th>Raw</th><th>Spec-adjusted</th><th>95% CI</th><th>R²</th><th>Half-life</th></tr></thead><tbody>`
+    + chips.map(c => row(c, depRate(und.filter(d => d.chip === c)))).join("") + row("All chips (pooled)", all, "tot") + `</tbody>`;
+}
+
 function drawStats(){
   const sale = VIEW.filter(isSaleAd), priced = sale.filter(d => priceOf(d)!=null), P = priced.map(priceOf);
   const D = describe(P);
@@ -674,6 +724,8 @@ function drawStats(){
     return `<tr><td>${s}</td><td>${x.n}</td><td>${x.mean>0?"+":""}${pct(x.mean,0)}</td><td>${x.median>0?"+":""}${pct(x.median,0)}</td><td>${num(x.sd,0)} pp</td>
       <td class="${x.ci==null?"mut":""}">${x.ci==null ? "–" : pct(x.mean-x.ci,0)+" – "+pct(x.mean+x.ci,0)}</td><td>${pct(r.filter(v => v<0).length/x.n*100,0)}</td></tr>`; });
   document.getElementById("st-dmg").innerHTML = `<thead><tr><th>Severity</th><th>n</th><th>Mean</th><th>Median</th><th>SD</th><th>95% CI of mean</th><th>Priced below ref.</th></tr></thead><tbody>${drows.join("")}</tbody>`;
+
+  drawDepTable(priced);
 
   // composition
   const batBand = v => v==null ? null : v>=95 ? "95–100%" : v>=90 ? "90–94%" : v>=85 ? "85–89%" : v>=80 ? "80–84%" : "Below 80%";
