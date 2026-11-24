@@ -1,0 +1,29 @@
+  <section class="stats" aria-label="Statistics">
+    <div class="intro"><h2>Statistics</h2>
+      <p>Everything below follows the filters above and the Latest price / Original ask toggle. Prices come from sale and trade ads that state a price. Variance and standard deviation (SD) are sample values (n−1). 95% intervals use the t distribution for means and the Wilson interval for percentages.</p></div>
+    <div class="card">
+      <div class="hd"><h2>Overall price distribution</h2><span class="note" id="st-ov-note"></span></div>
+      <div class="kv" id="st-overall"></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Price statistics by group</h2><span class="note">CV = SD ÷ mean · share = % of priced ads in the filter</span></div>
+      <div class="chips" id="st-groupby" role="group" aria-label="Group by"></div>
+      <div class="tw"><table class="st" id="st-group"></table></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="hd"><h2>What moves the price</h2><span class="note">correlation with price</span></div>
+        <div class="tw"><table class="st" id="st-corr"></table></div>
+        <div class="note">r is Pearson (linear), ρ is Spearman (rank). R² is the share of price variance a straight line on that variable explains. The slope is the average price change per unit, from a least-squares fit. Geekbench scores for about half the listings assume the chip's base configuration, which weakens those correlations.</div>
+      </div>
+      <div class="card">
+        <div class="hd"><h2>Damage discount</h2><span class="note">vs undamaged median, same chip &amp; RAM</span></div>
+        <div class="tw"><table class="st" id="st-dmg"></table></div>
+        <div class="note">Each damaged ad's price is compared with the median undamaged price for the same chip and RAM (needs 2+ undamaged ads). SD is in percentage points (pp).</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Composition</h2><span class="note">% of sale and trade ads in the filter · hover for the 95% interval</span></div>
+      <div class="comp" id="st-comp"></div>
+    </div>
+  </section>

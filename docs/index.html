@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carbonite Mac Market</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: one working column — header + summary tiles, a filter rail that wraps, a 2-col chart grid, then a statistics section. */
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --surface-2:#eef0f2; --line:#dcdfe3; --line-soft:#e9ebee;
+  --fg:#111418; --fg-2:#4a5058; --fg-3:#7a8089;
+  --accent:#2a78d6; --accent-soft:#dbe8f8; --accent-ink:#1c5cab;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --sev0:#9aa1a9; --sev1:#86b6ef; --sev2:#3987e5; --sev3:#fab219; --sev4:#ec835a; --sev5:#d03b3b;
+  --f-display:"Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131518; --surface:#1b1e22; --surface-2:#23272c; --line:#33383f; --line-soft:#2a2e34;
+  --fg:#eef0f2; --fg-2:#b9bec5; --fg-3:#868c95;
+  --accent:#3987e5; --accent-soft:#1d2f47; --accent-ink:#86b6ef;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c;
+  --sev0:#6b727b; --sev1:#5598e7; --sev2:#256abf;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131518; --surface:#1b1e22; --surface-2:#23272c; --line:#33383f; --line-soft:#2a2e34;
+  --fg:#eef0f2; --fg-2:#b9bec5; --fg-3:#868c95;
+  --accent:#3987e5; --accent-soft:#1d2f47; --accent-ink:#86b6ef;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c;
+  --sev0:#6b727b; --sev1:#5598e7; --sev2:#256abf;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+h1{font-size:clamp(24px,3.2vw,34px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:15px;font-weight:700;letter-spacing:-.005em}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3)}
+header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between}
+header p{margin:4px 0 0;color:var(--fg-2);max-width:70ch}
+.src{font-size:12px;color:var(--fg-3)}
+.src a{color:var(--accent-ink)}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .k{font-size:12px;color:var(--fg-2)}
+.tile .v{font-family:var(--f-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tile .s{font-size:11.5px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+/* filters */
+.filters{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.frow{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-start}
+.fg{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fg>label,.fg>.lbl{font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:500 12.5px/1 var(--f-body);padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg-2);cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--fg-3);color:var(--fg)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.chip:focus-visible,select:focus-visible,input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select,input[type=search],input[type=number],input[type=month]{font:13px var(--f-body);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{width:96px}
+input[type=search]{width:min(280px,100%)}
+.range{display:flex;gap:6px;align-items:center;color:var(--fg-3)}
+.btn{font:500 12.5px var(--f-body);padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--fg-3)}
+.fsum{font-size:12.5px;color:var(--fg-2)}
+.fsum b{color:var(--fg);font-variant-numeric:tabular-nums}
+/* charts */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid .wide{grid-column:1/-1}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .hd{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.card .note{font-size:12px;color:var(--fg-3)}
+.cv{position:relative;height:280px;min-width:0}
+.cv.tall{height:340px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--fg-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend i.dot{border-radius:50%}
+.legend i.line{height:2px;width:14px;border-radius:1px;vertical-align:3px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:500 12px var(--f-body);padding:5px 9px;background:transparent;border:0;color:var(--fg-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+/* heat table */
+.heat{overflow-x:auto}
+.heat table{border-collapse:separate;border-spacing:2px;font-variant-numeric:tabular-nums;font-size:12.5px;width:100%}
+.heat th{font:500 11px var(--f-mono);color:var(--fg-3);text-align:left;padding:4px 6px;white-space:nowrap}
+.heat td{padding:7px 6px;border-radius:4px;text-align:center;white-space:nowrap;min-width:64px;cursor:default}
+.heat td.e{color:var(--fg-3)}
+.heat td small{display:block;font-size:10.5px;opacity:.75}
+/* stats */
+.stats{display:flex;flex-direction:column;gap:12px}
+.stats .intro h2{font-size:22px;font-weight:800;letter-spacing:-.015em}
+.stats .intro p{margin:4px 0 0;color:var(--fg-2);max-width:90ch;font-size:13px}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:6px;overflow:hidden}
+.kv>div{background:var(--surface);padding:9px 11px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.kv .k{font-size:11.5px;color:var(--fg-2)}
+.kv .v{font-family:var(--f-display);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kv .s{font-size:11px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table.st{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.st th{font:500 10.5px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--fg-3);text-align:right;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:bottom}
+table.st th:first-child,table.st td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+table.st td{padding:6px 9px;border-bottom:1px solid var(--line-soft);text-align:right;white-space:nowrap}
+table.st td:first-child{font-weight:500;color:var(--fg)}
+table.st td.mut{color:var(--fg-3)}
+table.st tr.tot td{border-top:1px solid var(--line);border-bottom:0;font-weight:600}
+table.st tbody tr:hover td{background:var(--surface-2)}
+.comp{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px 28px}
+.comp h3{font-size:13px;font-weight:700;margin-bottom:6px}
+.cr{display:grid;grid-template-columns:minmax(84px,auto) minmax(40px,1fr) 46px 74px;gap:8px;align-items:center;font-size:12.5px;padding:2px 0;font-variant-numeric:tabular-nums}
+.cr .cl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+.cr .cb{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.cr .cb i{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0}
+.cr .cp{text-align:right;color:var(--fg)}
+.cr .cn{text-align:right;color:var(--fg-3);font-size:11px}
+.empty{padding:28px;text-align:center;color:var(--fg-3)}
+footer{font-size:12px;color:var(--fg-3);max-width:90ch}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">carbonite.co.za · Apple silicon · second-hand market</div>
+      <h1>Carbonite Mac Market</h1>
+      <p>Every M-series Mac (plus MacBook Neo) advertised on Carbonite's Apple, Resellers and Combo forums since the M1 launched in November 2020, with specs, prices, how damaged each one is, and Geekbench scores. This public copy leaves out seller names, locations, thread titles and links, and the per-listing table.</p>
+    </div>
+    <div class="src" id="srcline">Loading…</div>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+  <section class="filters" aria-label="Filters">
+    <div class="frow">
+      <div class="fg"><span class="lbl">Model</span><div class="chips" id="f-model"></div></div>
+      <div class="fg"><span class="lbl">Chip generation</span><div class="chips" id="f-gen"></div></div>
+      <div class="fg"><span class="lbl">Chip tier</span><div class="chips" id="f-tier"></div></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><span class="lbl">RAM</span><div class="chips" id="f-ram"></div></div>
+      <div class="fg"><span class="lbl">Storage</span><div class="chips" id="f-sto"></div></div>
+      <div class="fg"><span class="lbl">Screen</span><div class="chips" id="f-scr"></div></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><span class="lbl">Damage</span><div class="chips" id="f-sev"></div></div>
+      <div class="fg"><span class="lbl">Ad type</span><div class="chips" id="f-type"></div></div>
+      <div class="fg"><span class="lbl">Seller</span><div class="chips" id="f-seller"></div></div>
+      <div class="fg"><span class="lbl">Status</span><div class="chips" id="f-status"></div></div>
+    </div>
+    <div class="frow" style="align-items:flex-end">
+      <div class="fg"><label for="f-from">Posted between</label>
+        <div class="range"><input type="month" id="f-from"> – <input type="month" id="f-to"></div></div>
+      <div class="fg"><label for="f-pmin">Price (R)</label>
+        <div class="range"><input type="number" id="f-pmin" placeholder="min" step="500" min="0"> – <input type="number" id="f-pmax" placeholder="max" step="500" min="0"></div></div>
+      <div class="fg"><label for="f-gbm">Min Geekbench multi</label><input type="number" id="f-gbm" min="0" step="1000" placeholder="any" style="width:100px"></div>
+      <div class="fg"><label for="f-gbg">Min Metal (GPU)</label><input type="number" id="f-gbg" min="0" step="10000" placeholder="any" style="width:100px"></div>
+      <div class="fg"><label for="f-bat">Min battery %</label><input type="number" id="f-bat" min="50" max="100" step="1" placeholder="any" style="width:80px"></div>
+      <button class="btn" id="reset" type="button">Reset filters</button>
+    </div>
+    <div class="fsum" id="fsum"></div>
+  </section>
+
+  <section class="grid">
+    <div class="card wide">
+      <div class="hd"><h2>Asking price over time</h2>
+        <div class="seg" role="group" aria-label="Price shown">
+          <button type="button" id="pm-final" aria-pressed="true">Latest price</button>
+          <button type="button" id="pm-ask" aria-pressed="false">Original ask</button>
+        </div></div>
+      <div class="legend" id="lg-time"></div>
+      <div class="cv tall"><canvas id="c-time" aria-label="Scatter plot of listing prices by date"></canvas></div>
+      <div class="note">Each dot is one listing. The line is the monthly median of the dots shown (months with fewer than 3 priced listings are skipped).<span id="offscale"></span></div>
+    </div>
+    <div class="card wide">
+      <div class="hd"><h2>Depreciation by chip generation</h2>
+        <div class="seg" role="group" aria-label="Chip tier for depreciation">
+          <button type="button" class="dtier" data-t="Base" aria-pressed="true">Base chips</button>
+          <button type="button" class="dtier" data-t="Pro" aria-pressed="false">Pro chips</button>
+          <button type="button" class="dtier" data-t="Max" aria-pressed="false">Max chips</button>
+        </div></div>
+      <div class="legend" id="lg-dep"></div>
+      <div class="cv"><canvas id="c-dep" aria-label="Quarterly median price per chip generation"></canvas></div>
+      <div class="note">Quarterly median of undamaged sale ads for each generation at the chosen tier. Quarters with fewer than 3 priced ads are left as gaps.</div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Median price by chip</h2><span class="note">bar label = listings</span></div>
+      <div class="cv tall"><canvas id="c-chip" aria-label="Median price by chip"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>What damage does to price</h2><span class="note">median vs undamaged, same chip &amp; RAM</span></div>
+      <div class="cv tall"><canvas id="c-sev" aria-label="Price discount by damage severity"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Listings per month</h2></div>
+      <div class="legend" id="lg-vol"></div>
+      <div class="cv"><canvas id="c-vol" aria-label="Listings per month"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Price distribution</h2><span class="note">R2,500 bins</span></div>
+      <div class="cv"><canvas id="c-hist" aria-label="Price histogram"></canvas></div>
+    </div>
+    <div class="card wide">
+      <div class="hd"><h2>Price vs Geekbench performance</h2>
+        <div class="seg" role="group" aria-label="Benchmark">
+          <button type="button" class="gbm" data-m="gb_multi" aria-pressed="true">Multi-core</button>
+          <button type="button" class="gbm" data-m="gb_single" aria-pressed="false">Single-core</button>
+          <button type="button" class="gbm" data-m="gb_metal" aria-pressed="false">Metal (GPU)</button>
+        </div></div>
+      <div class="legend" id="lg-perf"></div>
+      <div class="cv tall"><canvas id="c-perf" aria-label="Scatter of listing price against Geekbench score"></canvas></div>
+      <div class="note">Further right and lower means more performance for the money. The dashed line is the typical price for a given score (least-squares fit on undamaged listings).</div>
+    </div>
+    <div class="card wide">
+      <div class="hd"><h2>Rand per 1,000 Geekbench points</h2><span class="note" id="vpk-note"></span></div>
+      <div class="cv"><canvas id="c-vpk" aria-label="Rand per 1000 benchmark points by chip"></canvas></div>
+    </div>
+    <div class="card wide">
+      <div class="hd"><h2>Median price: chip × RAM</h2><span class="note">cell = median latest price · count · undamaged sale ads only</span></div>
+      <div class="heat" id="heat"></div>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="Statistics">
+    <div class="intro"><h2>Statistics</h2>
+      <p>Everything below follows the filters above and the Latest price / Original ask toggle. Prices come from sale and trade ads that state a price. Variance and standard deviation (SD) are sample values (n−1). 95% intervals use the t distribution for means and the Wilson interval for percentages.</p></div>
+    <div class="card">
+      <div class="hd"><h2>Overall price distribution</h2><span class="note" id="st-ov-note"></span></div>
+      <div class="kv" id="st-overall"></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Price statistics by group</h2><span class="note">CV = SD ÷ mean · share = % of priced ads in the filter</span></div>
+      <div class="chips" id="st-groupby" role="group" aria-label="Group by"></div>
+      <div class="tw"><table class="st" id="st-group"></table></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="hd"><h2>What moves the price</h2><span class="note">correlation with price</span></div>
+        <div class="tw"><table class="st" id="st-corr"></table></div>
+        <div class="note">r is Pearson (linear), ρ is Spearman (rank). R² is the share of price variance a straight line on that variable explains. The slope is the average price change per unit, from a least-squares fit. Geekbench scores for about half the listings assume the chip's base configuration, which weakens those correlations.</div>
+      </div>
+      <div class="card">
+        <div class="hd"><h2>Damage discount</h2><span class="note">vs undamaged median, same chip &amp; RAM</span></div>
+        <div class="tw"><table class="st" id="st-dmg"></table></div>
+        <div class="note">Each damaged ad's price is compared with the median undamaged price for the same chip and RAM (needs 2+ undamaged ads). SD is in percentage points (pp).</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2>Composition</h2><span class="note">% of sale and trade ads in the filter · hover for the 95% interval</span></div>
+      <div class="comp" id="st-comp"></div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const SEV = ["None","Minor cosmetic","Moderate cosmetic","Functional – minor","Functional – major","Non-working / parts"];
+const SEVVAR = ["--sev0","--sev1","--sev2","--sev3","--sev4","--sev5"];
+const MODELS = ["MacBook Air","MacBook Pro","Mac mini","iMac","Mac Studio","MacBook Neo"];
+const GENS = ["M1","M2","M3","M4","M5","M6","A18"];
+const TIERS = ["Base","Pro","Max"];
+const RAMS = [8,16,18,24,32,36,48,64,96,128];
+const STOS = [256,512,1024,2048,4096];
+const SCRS = [13,14,15,16,24];
+const TYPES = ["For Sale","Reseller","Sale/Trade","Trade","Wanted","Feeler"];
+const fmtR = v => v==null? "–" : "R" + Math.round(v).toLocaleString("en-ZA").replace(/,/g," ").replace(/ /g," ");
+const fmtK = v => v==null? "–" : "R" + (v>=1000? (v/1000).toFixed(v%1000?1:0).replace(/\.0$/,"")+"k" : v);
+const stoTxt = s => s==null? "–" : s>=1024? (s/1024)+"TB" : s+"GB";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const median = a => { if(!a.length) return null; const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+const lbl = d => [d.model, d.screen ? d.screen + "″" : "", d.chip].filter(Boolean).join(" · ");
+const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let DATA = [], VIEW = [], priceMode = "final", sortK = "date", sortDir = -1, page = 0;
+const F = { model:new Set(), gen:new Set(), tier:new Set(), ram:new Set(), sto:new Set(), scr:new Set(), sev:new Set(), type:new Set(["For Sale","Reseller","Sale/Trade","Trade"]), seller:new Set(), status:new Set() };
+const DEFAULT_TYPES = ["For Sale","Reseller","Sale/Trade","Trade"];
+
+function chipGroup(el, key, values, label = v => v){
+  el.innerHTML = "";
+  values.forEach(v => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = label(v);
+    b.setAttribute("aria-pressed", F[key].has(v));
+    b.onclick = () => { F[key].has(v) ? F[key].delete(v) : F[key].add(v); b.setAttribute("aria-pressed", F[key].has(v)); page = 0; update(); };
+    el.appendChild(b);
+  });
+}
+function buildFilters(){
+  chipGroup(document.getElementById("f-model"), "model", MODELS.filter(m => DATA.some(d => d.model===m)));
+  chipGroup(document.getElementById("f-gen"), "gen", GENS.filter(g => DATA.some(d => d.gen===g)), g => g==="A18" ? "A18 (Neo)" : g);
+  chipGroup(document.getElementById("f-tier"), "tier", TIERS);
+  chipGroup(document.getElementById("f-ram"), "ram", RAMS.filter(r => DATA.filter(d => d.ram===r).length>1), r => r+"GB");
+  chipGroup(document.getElementById("f-sto"), "sto", STOS.filter(r => DATA.some(d => d.storage===r)), stoTxt);
+  chipGroup(document.getElementById("f-scr"), "scr", SCRS.filter(r => DATA.some(d => d.screen===r)), s => s+"″");
+  chipGroup(document.getElementById("f-sev"), "sev", SEV.map((_,i)=>i), i => SEV[i]);
+  chipGroup(document.getElementById("f-type"), "type", TYPES.filter(t => DATA.some(d => d.type===t)));
+  chipGroup(document.getElementById("f-seller"), "seller", ["Private","Reseller/Business"]);
+  chipGroup(document.getElementById("f-status"), "status", ["Sold","Not marked sold"]);
+}
+
+function passes(d){
+  if(F.model.size && !F.model.has(d.model)) return false;
+  if(F.gen.size && !F.gen.has(d.gen)) return false;
+  if(F.tier.size && !F.tier.has(d.tier)) return false;
+  if(F.ram.size && !F.ram.has(d.ram)) return false;
+  if(F.sto.size && !F.sto.has(d.storage)) return false;
+  if(F.scr.size && !F.scr.has(d.screen)) return false;
+  if(F.sev.size && !F.sev.has(d.sevIdx)) return false;
+  if(F.type.size && !F.type.has(d.type)) return false;
+  if(F.seller.size && !F.seller.has(d.seller_type)) return false;
+  if(F.status.size && !F.status.has(d.sold ? "Sold" : "Not marked sold")) return false;
+  const from = document.getElementById("f-from").value, to = document.getElementById("f-to").value;
+  if(from && d.date.slice(0,7) < from) return false;
+  if(to && d.date.slice(0,7) > to) return false;
+  const p = d[priceMode==="final"?"final_price":"asking_price"];
+  const pmin = +document.getElementById("f-pmin").value || 0, pmax = +document.getElementById("f-pmax").value || 0;
+  if((pmin || pmax) && p==null) return false;
+  if(pmin && p < pmin) return false;
+  if(pmax && p > pmax) return false;
+  const bat = +document.getElementById("f-bat").value || 0;
+  if(bat && !(d.battery_health >= bat)) return false;
+  const gbm = +document.getElementById("f-gbm").value || 0, gbg = +document.getElementById("f-gbg").value || 0;
+  if(gbm && !(d.gb_multi >= gbm)) return false;
+  if(gbg && !(d.gb_metal >= gbg)) return false;
+  return true;
+}
+
+const charts = {};
+Chart.defaults.font.family = "IBM Plex Sans, Segoe UI, system-ui, sans-serif";
+function baseOpts(){
+  const fg2 = css("--fg-2"), fg3 = css("--fg-3"), grid = css("--line-soft");
+  return {
+    responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:css("--surface"), titleColor:css("--fg"), bodyColor:fg2, borderColor:css("--line"), borderWidth:1, padding:10, titleFont:{family:"IBM Plex Sans",weight:"600"}, bodyFont:{family:"IBM Plex Sans"}, displayColors:true, boxPadding:4 } },
+    scales:{ x:{ grid:{color:grid, drawTicks:false}, border:{color:css("--line")}, ticks:{color:fg3, font:{family:"IBM Plex Mono", size:11}, padding:6} },
+             y:{ grid:{color:grid, drawTicks:false}, border:{display:false}, ticks:{color:fg3, font:{family:"IBM Plex Mono", size:11}, padding:6} } }
+  };
+}
+function mk(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+const priceOf = d => d[priceMode==="final"?"final_price":"asking_price"];
+const isSaleAd = d => d.type !== "Wanted" && d.type !== "Feeler";
+
+function drawCharts(){
+  const sale = VIEW.filter(d => isSaleAd(d) && priceOf(d)!=null);
+  const s1 = css("--s1"), s2 = css("--s2"), surf = css("--surface"), fg = css("--fg");
+  // time scatter
+  const ok = sale.filter(d => d.sevIdx===0), dmg = sale.filter(d => d.sevIdx>0);
+  const months = [...new Set(sale.map(d => d.date.slice(0,7)))].sort();
+  const med = months.map(m => { const a = sale.filter(d => d.date.startsWith(m)).map(priceOf); return a.length>=3 ? {x: Date.parse(m+"-15"), y: median(a), n:a.length} : null; }).filter(Boolean);
+  const pt = d => ({x: Date.parse(d.date), y: priceOf(d), d});
+  document.getElementById("lg-time").innerHTML = `<span><i class="dot" style="background:${s1}"></i>No damage reported (${ok.length})</span><span><i class="dot" style="background:${s2}"></i>Damaged (${dmg.length})</span><span><i class="line" style="background:${fg}"></i>Monthly median</span>`;
+  const o = baseOpts();
+  o.scales.x.type = "linear";
+  o.scales.x.ticks.callback = v => new Date(v).toLocaleDateString("en-ZA",{month:"short",year:"2-digit"});
+  o.scales.x.ticks.maxTicksLimit = 12;
+  o.scales.y.ticks.callback = v => fmtK(v);
+  { const sp = sale.map(priceOf).sort((a,b)=>a-b); if(sp.length > 20){ const cap = Math.ceil(sp[Math.floor(sp.length*.99)]*1.1/10000)*10000; o.scales.y.max = cap; o.scales.y.min = 0;
+      const off = sp.filter(v => v > cap).length; document.getElementById("offscale").textContent = off ? ` ${off} listing${off>1?"s":""} above ${fmtK(cap)} ${off>1?"are":"is"} off the top of the chart; narrow the filters to see ${off>1?"them":"it"}.` : ""; } else document.getElementById("offscale").textContent = ""; }
+  o.plugins.tooltip.callbacks = { title: it => it[0].raw.d ? lbl(it[0].raw.d) : "Median " + new Date(it[0].raw.x).toLocaleDateString("en-ZA",{month:"long",year:"numeric"}),
+    label: it => it.raw.d ? [`${fmtR(it.raw.y)} · ${it.raw.d.date}`, `${it.raw.d.chip} · ${it.raw.d.ram??"?"}GB · ${stoTxt(it.raw.d.storage)}`, `Damage: ${SEV[it.raw.d.sevIdx]}`] : `${fmtR(it.raw.y)} (${it.raw.n} listings)` };
+  o.interaction = {mode:"nearest", intersect:true};
+  mk("c-time", { type:"scatter", data:{ datasets:[
+    {label:"Median", type:"line", data:med, borderColor:fg, borderWidth:2, pointRadius:0, pointHoverRadius:5, pointBackgroundColor:fg, tension:.25, order:0},
+    {label:"Damaged", data:dmg.map(pt), backgroundColor:s2, borderColor:surf, borderWidth:1.5, pointRadius:4.5, pointHoverRadius:7, order:1},
+    {label:"No damage", data:ok.map(pt), backgroundColor:s1+"b3", borderColor:surf, borderWidth:1, pointRadius:4, pointHoverRadius:7, order:2},
+  ]}, options:o });
+
+  // chip medians
+  const chipOrder = ["M1","M1 Pro","M1 Max","M2","M2 Pro","M2 Max","M3","M3 Pro","M3 Max","M4","M4 Pro","M4 Max","M5","M5 Pro","M5 Max","M6","A18 Pro"];
+  const byChip = chipOrder.map(c => { const a = sale.filter(d => d.chip===c && d.sevIdx===0).map(priceOf); return {c, m:median(a), n:a.length}; }).filter(r => r.n);
+  const o2 = baseOpts();
+  o2.indexAxis = "y";
+  o2.scales.x.ticks.callback = v => fmtK(v);
+  o2.scales.y.grid.display = false;
+  o2.plugins.tooltip.callbacks = { label: it => `${fmtR(it.raw)} median · ${byChip[it.dataIndex].n} undamaged listings` };
+  mk("c-chip", { type:"bar", data:{ labels:byChip.map(r=>r.c), datasets:[{ data:byChip.map(r=>r.m), backgroundColor:s1, borderRadius:{topRight:4,bottomRight:4}, borderSkipped:"start", barPercentage:.72, categoryPercentage:.9 }]},
+    options:o2, plugins:[{ id:"cnt", afterDatasetsDraw(ch){ const c = ch.ctx; c.save(); c.font = "11px IBM Plex Mono"; c.fillStyle = css("--fg-3"); c.textBaseline = "middle";
+      ch.getDatasetMeta(0).data.forEach((b,i) => c.fillText(byChip[i].n, b.x + 6, b.y)); c.restore(); } }] });
+
+  // damage discount: ratio of price to undamaged median of same chip+ram
+  const ref = {};
+  sale.filter(d => d.sevIdx===0).forEach(d => { const k = d.chip+"|"+d.ram; (ref[k] ||= []).push(priceOf(d)); });
+  Object.keys(ref).forEach(k => ref[k] = ref[k].length>=2 ? median(ref[k]) : null);
+  const sevRows = SEV.map((s,i) => { const r = sale.filter(d => d.sevIdx===i && ref[d.chip+"|"+d.ram]).map(d => priceOf(d)/ref[d.chip+"|"+d.ram]); return {s, i, v: r.length? (median(r)-1)*100 : null, n:r.length}; });
+  const o3 = baseOpts();
+  o3.layout = {padding:{top:20}};
+  o3.scales.x.ticks.font = {family:"IBM Plex Sans", size:11}; o3.scales.x.ticks.maxRotation = 0; o3.scales.x.ticks.autoSkip = false;
+  o3.scales.y.ticks.callback = v => (v>0?"+":"") + v + "%";
+  o3.scales.x.grid.display = false;
+  o3.scales.x.ticks.callback = function(v){ const l = this.getLabelForValue(v); return l.split(" – ").length>1 ? l.split(" – ") : l.split(" "); };
+  o3.plugins.tooltip.callbacks = { label: it => it.raw==null ? "no data" : `${it.raw>0?"+":""}${it.raw.toFixed(0)}% vs undamaged · ${sevRows[it.dataIndex].n} listings` };
+  mk("c-sev", { type:"bar", data:{ labels:sevRows.map(r=>r.s), datasets:[{ data:sevRows.map(r=>r.v), backgroundColor:sevRows.map(r=>css(SEVVAR[r.i])), borderRadius:4, borderSkipped:false, barPercentage:.7 }]},
+    options:o3, plugins:[{ id:"cnt2", afterDatasetsDraw(ch){ const c = ch.ctx; c.save(); c.font = "11px IBM Plex Mono"; c.fillStyle = css("--fg-2"); c.textAlign = "center";
+      ch.getDatasetMeta(0).data.forEach((b,i) => { const r = sevRows[i]; if(r.v==null) return; c.textBaseline = r.v<0 ? "top" : "bottom"; c.fillText((r.v>0?"+":"")+r.v.toFixed(0)+"% · n"+r.n, b.x, r.v<0 ? b.y+4 : b.y-4); }); c.restore(); } }] });
+
+  // volume per month stacked: undamaged / damaged
+  const allMonths = monthsRange();
+  const vOk = allMonths.map(m => VIEW.filter(d => isSaleAd(d) && d.sevIdx===0 && d.date.startsWith(m)).length);
+  const vD = allMonths.map(m => VIEW.filter(d => isSaleAd(d) && d.sevIdx>0 && d.date.startsWith(m)).length);
+  document.getElementById("lg-vol").innerHTML = `<span><i style="background:${s1}"></i>No damage reported</span><span><i style="background:${s2}"></i>Damaged</span>`;
+  const o4 = baseOpts();
+  o4.scales.x.stacked = o4.scales.y.stacked = true; o4.scales.x.grid.display = false;
+  const longRange = allMonths.length > 30;
+  o4.scales.x.ticks.callback = function(v){ const m = this.getLabelForValue(v); if(m.endsWith("-01") || v===0) return m.slice(0,4); return longRange ? "" : new Date(m+"-15").toLocaleDateString("en-ZA",{month:"narrow"}); };
+  o4.scales.x.ticks.autoSkip = false; o4.scales.x.ticks.maxRotation = 0;
+  o4.plugins.tooltip.mode = "index"; o4.plugins.tooltip.intersect = false;
+  o4.plugins.tooltip.callbacks = { title: it => new Date(it[0].label+"-15").toLocaleDateString("en-ZA",{month:"long",year:"numeric"}) };
+  mk("c-vol", { type:"bar", data:{ labels:allMonths, datasets:[
+    { label:"No damage", data:vOk, backgroundColor:s1, borderColor:surf, borderWidth:{top:2}, borderSkipped:"bottom", barPercentage:.82, categoryPercentage:.9 },
+    { label:"Damaged", data:vD, backgroundColor:s2, borderRadius:{topLeft:4,topRight:4}, borderSkipped:"bottom", barPercentage:.82, categoryPercentage:.9 }]}, options:o4 });
+
+  // histogram
+  const ps = sale.map(priceOf); const bw = 2500; const maxP = Math.min(Math.max(...ps, 0), 80000);
+  const bins = []; for(let b=0; b<=maxP; b+=bw) bins.push({lo:b, n:0});
+  ps.forEach(p => { const i = Math.min(Math.floor(p/bw), bins.length-1); if(bins[i]) bins[i].n++; });
+  const o5 = baseOpts(); o5.scales.x.grid.display = false;
+  o5.scales.x.ticks.callback = function(v){ const b = bins[v]; return b && b.lo % 10000 === 0 ? fmtK(b.lo) : ""; };
+  o5.scales.x.ticks.autoSkip = false; o5.scales.x.ticks.maxRotation = 0;
+  o5.plugins.tooltip.callbacks = { title: it => { const b = bins[it[0].dataIndex]; return `${fmtR(b.lo)} – ${fmtR(b.lo+bw-1)}${b.lo+bw>maxP && maxP===80000?"+":""}`; }, label: it => `${it.raw} listings` };
+  mk("c-hist", { type:"bar", data:{ labels:bins.map(b=>b.lo), datasets:[{ data:bins.map(b=>b.n), backgroundColor:s1, borderRadius:{topLeft:4,topRight:4}, borderSkipped:"bottom", barPercentage:.92, categoryPercentage:.96 }]}, options:o5 });
+
+  drawPerf(sale);
+  drawDep(sale);
+  drawHeat(sale);
+}
+
+let depTier = "Base";
+function drawDep(sale){
+  const gens = ["M1","M2","M3","M4","M5","M6"];
+  const cols = ["--s1","--s2","--s3","--s4","--s5","--s6"].map(css);
+  const q = d => d.slice(0,4) + "-Q" + (Math.floor((+d.slice(5,7)-1)/3)+1);
+  const und = sale.filter(d => d.sevIdx===0 && d.tier===depTier && d.gen!=="A18");
+  const quarters = [...new Set(DATA.map(d => q(d.date)))].sort();
+  const present = gens.filter(g => und.some(d => d.gen===g));
+  const ds = present.map(g => { const i = gens.indexOf(g); return { label:g, data: quarters.map(Q => { const a = und.filter(d => d.gen===g && q(d.date)===Q).map(priceOf); return a.length>=3 ? median(a) : null; }),
+    borderColor:cols[i], backgroundColor:cols[i], borderWidth:2, pointRadius:3, pointHoverRadius:6, pointBorderColor:css("--surface"), pointBorderWidth:1.5, spanGaps:false, tension:.2 }; });
+  document.getElementById("lg-dep").innerHTML = ds.length ? present.map((g) => `<span><i class="line" style="background:${cols[gens.indexOf(g)]}"></i>${g} ${depTier==="Base"?"":depTier}</span>`).join("") : `<span>No undamaged ${depTier} listings match the filters.</span>`;
+  const o = baseOpts();
+  o.scales.y.ticks.callback = v => fmtK(v); o.scales.y.min = 0;
+  o.scales.x.grid.display = false; o.scales.x.ticks.autoSkip = false; o.scales.x.ticks.maxRotation = 0;
+  o.scales.x.ticks.callback = function(v){ const l = this.getLabelForValue(v); return l.endsWith("Q1") ? l.slice(0,4) : ""; };
+  o.plugins.tooltip.mode = "index"; o.plugins.tooltip.intersect = false;
+  o.plugins.tooltip.callbacks = { title: it => it[0].label.replace("-", " "), label: it => it.raw==null ? null : `${it.dataset.label}: ${fmtR(it.raw)}` };
+  o.plugins.tooltip.filter = it => it.raw != null;
+  mk("c-dep", { type:"line", data:{ labels:quarters, datasets:ds }, options:o });
+}
+document.querySelectorAll(".dtier").forEach(b => b.onclick = () => { depTier = b.dataset.t; document.querySelectorAll(".dtier").forEach(x => x.setAttribute("aria-pressed", x===b)); drawDep(VIEW.filter(d => isSaleAd(d) && priceOf(d)!=null)); });
+
+let gbMetric = "gb_multi";
+const GBL = {gb_multi:"Geekbench 6 multi-core", gb_single:"Geekbench 6 single-core", gb_metal:"Geekbench 6 Metal"};
+function drawPerf(sale){
+  const s1 = css("--s1"), s2 = css("--s2"), surf = css("--surface"), fg = css("--fg");
+  const pts = sale.filter(d => d[gbMetric]);
+  const ok = pts.filter(d => d.sevIdx===0), dmg = pts.filter(d => d.sevIdx>0);
+  let fit = [];
+  if(ok.length > 5){
+    const xs = ok.map(d => d[gbMetric]), ys = ok.map(priceOf), n = xs.length;
+    const mx = xs.reduce((a,b)=>a+b)/n, my = ys.reduce((a,b)=>a+b)/n;
+    let sxy = 0, sxx = 0; xs.forEach((x,i) => { sxy += (x-mx)*(ys[i]-my); sxx += (x-mx)**2; });
+    if(sxx > 0){ const b = sxy/sxx, a = my - b*mx; const lo = Math.min(...xs), hi = Math.max(...xs); fit = [{x:lo, y:Math.max(0,a+b*lo)}, {x:hi, y:a+b*hi}]; }
+  }
+  document.getElementById("lg-perf").innerHTML = `<span><i class="dot" style="background:${s1}"></i>No damage reported (${ok.length})</span><span><i class="dot" style="background:${s2}"></i>Damaged (${dmg.length})</span><span><i class="line" style="background:${fg}"></i>Typical price for score</span>`;
+  const o = baseOpts();
+  o.scales.x.type = "linear"; o.scales.x.title = {display:true, text:GBL[gbMetric], color:css("--fg-3"), font:{size:11}};
+  o.scales.x.ticks.callback = v => v>=1000 ? (v/1000)+"k" : v;
+  o.scales.y.ticks.callback = v => fmtK(v); o.scales.y.min = 0;
+  const sp = pts.map(priceOf).sort((a,b)=>a-b); if(sp.length > 20) o.scales.y.max = Math.ceil(sp[Math.floor(sp.length*.99)]*1.1/10000)*10000;
+  o.interaction = {mode:"nearest", intersect:true};
+  const pt = d => ({x:d[gbMetric], y:priceOf(d), d});
+  o.plugins.tooltip.callbacks = { title: it => it[0].raw.d ? lbl(it[0].raw.d) : "Typical price",
+    label: it => it.raw.d ? [`${fmtR(it.raw.y)} · ${it.raw.d.gb_config}`, `Single ${it.raw.d.gb_single.toLocaleString()} · Multi ${it.raw.d.gb_multi.toLocaleString()} · Metal ${it.raw.d.gb_metal.toLocaleString()}`, `R${Math.round(it.raw.y/it.raw.x*1000)} per 1k pts · ${SEV[it.raw.d.sevIdx]}`] : fmtR(it.raw.y) };
+  mk("c-perf", { type:"scatter", data:{ datasets:[
+    {label:"Fit", type:"line", data:fit, borderColor:fg, borderWidth:2, borderDash:[6,4], pointRadius:0, order:0},
+    {label:"Damaged", data:dmg.map(pt), backgroundColor:s2, borderColor:surf, borderWidth:1.5, pointRadius:4.5, pointHoverRadius:7, order:1},
+    {label:"No damage", data:ok.map(pt), backgroundColor:s1+"b3", borderColor:surf, borderWidth:1, pointRadius:4, pointHoverRadius:7, order:2} ]}, options:o });
+
+  const groups = {};
+  ok.forEach(d => { (groups[d.chip] ||= []).push(priceOf(d)/d[gbMetric]*1000); });
+  const rows = Object.entries(groups).map(([c,a]) => ({c, v:median(a), n:a.length})).filter(r => r.n >= 3).sort((a,b) => a.v-b.v);
+  document.getElementById("vpk-note").textContent = `${GBL[gbMetric]} · median of undamaged listings, chips with 3+ ads · shorter bar = better value · green = best`;
+  const o2 = baseOpts(); o2.indexAxis = "y"; o2.scales.y.grid.display = false;
+  o2.scales.x.ticks.callback = v => "R" + v;
+  o2.layout = {padding:{right:70}};
+  o2.plugins.tooltip.callbacks = { label: it => `R${Math.round(it.raw)} per 1,000 points · ${rows[it.dataIndex].n} listings` };
+  document.getElementById("c-vpk").parentElement.style.height = Math.max(160, rows.length*24 + 50) + "px";
+  mk("c-vpk", { type:"bar", data:{ labels:rows.map(r=>r.c), datasets:[{ data:rows.map(r=>r.v), backgroundColor:rows.map((r,i) => i===0 ? css("--s3") : s1), borderRadius:{topRight:4,bottomRight:4}, borderSkipped:"start", barPercentage:.72, categoryPercentage:.9 }]},
+    options:o2, plugins:[{ id:"cnt3", afterDatasetsDraw(ch){ const c = ch.ctx; c.save(); c.font = "11px IBM Plex Mono"; c.fillStyle = css("--fg-3"); c.textBaseline = "middle";
+      ch.getDatasetMeta(0).data.forEach((b,i) => c.fillText(`R${Math.round(rows[i].v)} · n${rows[i].n}`, b.x + 6, b.y)); c.restore(); } }] });
+}
+document.querySelectorAll(".gbm").forEach(b => b.onclick = () => { gbMetric = b.dataset.m; document.querySelectorAll(".gbm").forEach(x => x.setAttribute("aria-pressed", x===b)); drawPerf(VIEW.filter(d => isSaleAd(d) && priceOf(d)!=null)); });
+
+function monthsRange(){
+  const ms = DATA.map(d => d.date.slice(0,7)).sort(); if(!ms.length) return [];
+  const out = []; let [y,m] = ms[0].split("-").map(Number); const [ey,em] = ms[ms.length-1].split("-").map(Number);
+  while(y<ey || (y===ey && m<=em)){ out.push(`${y}-${String(m).padStart(2,"0")}`); m++; if(m>12){m=1;y++;} }
+  return out;
+}
+
+function drawHeat(sale){
+  const chips = ["M1","M1 Pro","M1 Max","M2","M2 Pro","M2 Max","M3","M3 Pro","M3 Max","M4","M4 Pro","M4 Max","M5","M5 Pro","M5 Max","M6","A18 Pro"];
+  const und = sale.filter(d => d.sevIdx===0);
+  const rams = RAMS.filter(r => und.some(d => d.ram===r));
+  const rows = chips.filter(c => und.some(d => d.chip===c));
+  const cells = {}; let lo = Infinity, hi = 0;
+  rows.forEach(c => rams.forEach(r => { const a = und.filter(d => d.chip===c && d.ram===r).map(priceOf); if(a.length){ const m = median(a); cells[c+"|"+r] = {m, n:a.length}; lo = Math.min(lo,m); hi = Math.max(hi,m); } }));
+  const ramp = ["#cde2fb","#b7d3f6","#9ec5f4","#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#1c5cab","#184f95","#104281","#0d366b"];
+  const color = m => { const t = hi>lo ? Math.log(m/lo)/Math.log(hi/lo) : .5; const i = Math.round(t*(ramp.length-1)); return [ramp[i], i>=6 ? "#ffffff" : "#0b1b33"]; };
+  if(!rows.length){ document.getElementById("heat").innerHTML = `<div class="empty">No undamaged priced listings match these filters.</div>`; return; }
+  let h = `<table><thead><tr><th>Chip \\ RAM</th>${rams.map(r=>`<th>${r}GB</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(c => { h += `<tr><th>${c}</th>` + rams.map(r => { const x = cells[c+"|"+r]; if(!x) return `<td class="e">·</td>`; const [bg,fg] = color(x.m);
+    return `<td style="background:${bg};color:${fg}" title="${c} · ${r}GB: median ${fmtR(x.m)} from ${x.n} listing${x.n>1?"s":""}">${fmtK(x.m)}<small>n=${x.n}</small></td>`; }).join("") + `</tr>`; });
+  document.getElementById("heat").innerHTML = h + `</tbody></table>`;
+}
+
+function drawTiles(){
+  const sale = VIEW.filter(isSaleAd), priced = sale.filter(d => priceOf(d)!=null);
+  const soldP = priced.filter(d => d.sold).map(priceOf);
+  const dmg = sale.filter(d => d.sevIdx>0), major = sale.filter(d => d.sevIdx>=4);
+  const res = sale.filter(d => d.seller_type==="Reseller/Business");
+  const drops = sale.filter(d => d.asking_price && d.final_price && d.final_price < d.asking_price);
+  const bat = sale.map(d => d.battery_health).filter(Boolean);
+  const t = [
+    ["Listings", VIEW.length.toLocaleString(), `${sale.length} sale/trade · ${VIEW.length-sale.length} wanted · ${sale.length ? Math.round(res.length/sale.length*100) : 0}% resellers`],
+    ["Median price", fmtR(median(priced.map(priceOf))), `${priced.length} priced ads · median battery ${bat.length ? median(bat)+"%" : "–"}`],
+    ["Median, marked sold", fmtR(median(soldP)), `${soldP.length} sold with a price`],
+    ["Damaged", sale.length ? Math.round(dmg.length/sale.length*100)+"%" : "–", `${dmg.length} ads · ${major.length} major or non-working`],
+    ["Price drops", drops.length.toLocaleString(), drops.length ? `median cut ${Math.round(median(drops.map(d => (1-d.final_price/d.asking_price)*100)))}%` : "none"],
+    (() => { const g = {}; priced.filter(d => d.sevIdx===0 && d.gb_multi).forEach(d => (g[d.chip] ||= []).push(priceOf(d)/d.gb_multi*1000));
+      const best = Object.entries(g).filter(([,a]) => a.length>=5).map(([c,a]) => [c, median(a), a.length]).sort((a,b)=>a[1]-b[1])[0];
+      return ["Best value chip", best ? best[0] : "–", best ? `R${Math.round(best[1])} per 1k multi-core pts · n${best[2]}` : "needs 5+ undamaged ads"]; })(),
+  ];
+  document.getElementById("tiles").innerHTML = t.map(([k,v,s]) => `<div class="tile"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></div>`).join("");
+}
+
+// ---------- statistics ----------
+const sum = a => a.reduce((s,x) => s+x, 0);
+const mean = a => a.length ? sum(a)/a.length : null;
+const quant = (a, q) => { if(!a.length) return null; const s = [...a].sort((x,y)=>x-y), p = (s.length-1)*q, lo = Math.floor(p), hi = Math.ceil(p); return s[lo] + (s[hi]-s[lo])*(p-lo); };
+// two-sided 95% t critical value (Cornish-Fisher expansion; exact enough for display)
+const tcrit = df => { const z = 1.959964; if(df < 1) return NaN; if(df === 1) return 12.706; if(df === 2) return 4.303;
+  return z + (z**3+z)/(4*df) + (5*z**5+16*z**3+3*z)/(96*df**2) + (3*z**7+19*z**5+17*z**3-15*z)/(384*df**3); };
+function describe(a){
+  const n = a.length, m = mean(a);
+  if(!n) return {n:0};
+  const v = n > 1 ? sum(a.map(x => (x-m)**2))/(n-1) : null, sd = v==null ? null : Math.sqrt(v);
+  const m2 = sum(a.map(x => (x-m)**2))/n, m3 = sum(a.map(x => (x-m)**3))/n, m4 = sum(a.map(x => (x-m)**4))/n;
+  const skew = n > 2 && m2 > 0 ? (m3/m2**1.5) * Math.sqrt(n*(n-1))/(n-2) : null;
+  const kurt = n > 3 && m2 > 0 ? ((n+1)*(m4/m2**2) - 3*(n-1)) * (n-1)/((n-2)*(n-3)) : null;
+  const se = sd==null ? null : sd/Math.sqrt(n);
+  return { n, mean:m, median:quant(a,.5), v, sd, se, ci: se==null ? null : tcrit(n-1)*se, cv: sd!=null && m ? sd/m*100 : null,
+    min:Math.min(...a), max:Math.max(...a), p10:quant(a,.1), p25:quant(a,.25), p75:quant(a,.75), p90:quant(a,.9),
+    gmean: a.every(x => x>0) ? Math.exp(mean(a.map(Math.log))) : null, skew, kurt };
+}
+function wilson(x, n){ if(!n) return [null,null,null]; const z = 1.959964, p = x/n, d = 1+z*z/n, c = (p + z*z/(2*n))/d, h = z*Math.sqrt(p*(1-p)/n + z*z/(4*n*n))/d; return [p*100, (c-h)*100, (c+h)*100]; }
+function pearson(xs, ys){ const n = xs.length; if(n < 3) return null; const mx = mean(xs), my = mean(ys);
+  let sxy = 0, sxx = 0, syy = 0; for(let i=0;i<n;i++){ const a = xs[i]-mx, b = ys[i]-my; sxy += a*b; sxx += a*a; syy += b*b; }
+  if(!sxx || !syy) return null; return { r: sxy/Math.sqrt(sxx*syy), slope: sxy/sxx }; }
+function ranks(a){ const idx = a.map((v,i) => [v,i]).sort((x,y) => x[0]-y[0]), r = new Array(a.length);
+  for(let i=0;i<idx.length;){ let j = i; while(j+1<idx.length && idx[j+1][0]===idx[i][0]) j++; const avg = (i+j)/2 + 1; for(let k=i;k<=j;k++) r[idx[k][1]] = avg; i = j+1; } return r; }
+const pct = (v, dp=1) => v==null || isNaN(v) ? "–" : (v < 0 && v.toFixed(dp) != 0 ? "−" : "") + Math.abs(v).toFixed(dp) + "%";
+const num = (v, dp=2) => v==null || isNaN(v) ? "–" : (v<0 ? "−" : "") + Math.abs(v).toFixed(dp);
+const fmtM = v => v==null ? "–" : (v/1e6 >= 100 ? Math.round(v/1e6).toLocaleString("en-US").replace(/,/g," ") : (v/1e6).toFixed(1));
+const strength = r => { const a = Math.abs(r); return a < .1 ? "negligible" : a < .3 ? "weak" : a < .5 ? "moderate" : a < .7 ? "strong" : "very strong"; };
+
+const CHIP_ORDER = ["M1","M1 Pro","M1 Max","M1 Ultra","M2","M2 Pro","M2 Max","M2 Ultra","M3","M3 Pro","M3 Max","M3 Ultra","M4","M4 Pro","M4 Max","M5","M5 Pro","M5 Max","M6","A18 Pro"];
+const GROUPS = {
+  chip:   { label:"Chip", key:d => d.chip, order:CHIP_ORDER },
+  gen:    { label:"Generation", key:d => d.gen, order:GENS },
+  tier:   { label:"Tier", key:d => d.tier, order:TIERS },
+  model:  { label:"Model", key:d => d.model, order:MODELS },
+  ram:    { label:"RAM", key:d => d.ram, fmt:v => v+"GB", num:true },
+  storage:{ label:"Storage", key:d => d.storage, fmt:stoTxt, num:true },
+  screen: { label:"Screen", key:d => d.screen, fmt:v => v+"″", num:true },
+  damage: { label:"Damage", key:d => SEV[d.sevIdx], order:SEV },
+  seller: { label:"Seller", key:d => d.seller_type, order:["Private","Reseller/Business"] },
+  cond:   { label:"Condition", key:d => d.condition || null, order:["New/Sealed","Like new","Good","Fair","Poor","For parts"] },
+  year:   { label:"Year listed", key:d => d.date.slice(0,4), num:true },
+  type:   { label:"Ad type", key:d => d.type, order:TYPES },
+};
+let groupBy = "chip";
+function buildGroupBy(){
+  const el = document.getElementById("st-groupby"); el.innerHTML = "";
+  Object.entries(GROUPS).forEach(([k,g]) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = g.label;
+    b.setAttribute("aria-pressed", k===groupBy); b.onclick = () => { groupBy = k; buildGroupBy(); drawStats(); }; el.appendChild(b); });
+}
+
+function drawStats(){
+  const sale = VIEW.filter(isSaleAd), priced = sale.filter(d => priceOf(d)!=null), P = priced.map(priceOf);
+  const D = describe(P);
+  // overall
+  const bat = sale.map(d => d.battery_health).filter(v => v!=null), B = describe(bat);
+  const drops = priced.filter(d => d.asking_price && d.final_price && d.final_price < d.asking_price), cuts = describe(drops.map(d => (1-d.final_price/d.asking_price)*100));
+  const withAsk = priced.filter(d => d.asking_price && d.final_price).length;
+  const vpk = describe(priced.filter(d => d.sevIdx===0 && d.gb_multi).map(d => priceOf(d)/d.gb_multi*1000));
+  const dm = wilson(sale.filter(d => d.sevIdx>0).length, sale.length), so = wilson(sale.filter(d => d.sold).length, sale.length),
+        rs = wilson(sale.filter(d => d.seller_type==="Reseller/Business").length, sale.length), dr = wilson(drops.length, withAsk);
+  const ci = (lo, hi) => lo==null ? "" : `95% CI ${pct(lo)} – ${pct(hi)}`;
+  const items = D.n ? [
+    ["Priced ads (n)", D.n.toLocaleString(), `of ${sale.length.toLocaleString()} sale/trade ads`],
+    ["Mean", fmtR(D.mean), D.ci!=null ? `95% CI ${fmtR(Math.max(0, D.mean-D.ci))} – ${fmtR(D.mean+D.ci)}` : ""],
+    ["Median", fmtR(D.median), `mean is ${pct((D.mean/D.median-1)*100,0)} ${D.mean>=D.median?"above":"below"} it`],
+    ["Standard deviation", fmtR(D.sd), `standard error of mean ${fmtR(D.se)}`],
+    ["Variance", D.v!=null ? fmtM(D.v)+"M" : "–", "rand², in millions"],
+    ["Coefficient of variation", pct(D.cv), "SD as % of mean"],
+    ["Geometric mean", fmtR(D.gmean), "less pulled by expensive outliers"],
+    ["Interquartile range", fmtR(D.p75-D.p25), `P25 ${fmtR(D.p25)} · P75 ${fmtR(D.p75)}`],
+    ["10th – 90th percentile", `${fmtK(Math.round(D.p10))} – ${fmtK(Math.round(D.p90))}`, "middle 80% of prices"],
+    ["Range", `${fmtK(D.min)} – ${fmtK(D.max)}`, `spread ${fmtR(D.max-D.min)}`],
+    ["Skewness", num(D.skew), D.skew==null ? "" : D.skew > 1 ? "strong right skew (long tail of pricey Macs)" : D.skew > .5 ? "moderate right skew" : D.skew < -.5 ? "left skew" : "roughly symmetric"],
+    ["Excess kurtosis", num(D.kurt), D.kurt==null ? "" : D.kurt > 1 ? "heavier tails than normal" : D.kurt < -1 ? "lighter tails than normal" : "close to normal tails"],
+    ["Damaged", pct(dm[0]), ci(dm[1], dm[2])],
+    ["Marked sold", pct(so[0]), ci(so[1], so[2])],
+    ["Reseller ads", pct(rs[0]), ci(rs[1], rs[2])],
+    ["Ads with a price drop", pct(dr[0]), drops.length ? `mean cut ${pct(cuts.mean)} ± ${pct(cuts.sd)} SD` : "none"],
+    ["Battery health", B.n ? pct(B.mean) : "–", B.n ? `mean · SD ${num(B.sd,1)} pts · median ${pct(B.median,0)} · n${B.n}` : "not stated"],
+    ["Below 80% battery", B.n ? pct(bat.filter(v => v<80).length/B.n*100) : "–", B.n ? `${bat.filter(v => v<80).length} of ${B.n} that state it` : ""],
+    ["Rand per 1k multi-core pts", vpk.n ? "R"+Math.round(vpk.mean) : "–", vpk.n ? `mean · SD R${Math.round(vpk.sd||0)} · median R${Math.round(vpk.median)} (undamaged)` : ""],
+  ] : [];
+  document.getElementById("st-overall").innerHTML = items.length ? items.map(([k,v,s]) => `<div><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></div>`).join("")
+    : `<div class="empty" style="grid-column:1/-1">No priced listings match these filters.</div>`;
+  document.getElementById("st-ov-note").textContent = priceMode==="final" ? "latest price" : "original asking price";
+
+  // by group
+  const g = GROUPS[groupBy], bucket = new Map();
+  priced.forEach(d => { const k = g.key(d); if(k==null || k==="") return; if(!bucket.has(k)) bucket.set(k, []); bucket.get(k).push(d); });
+  let keys = [...bucket.keys()];
+  if(g.order) keys.sort((a,b) => (g.order.indexOf(a)+1 || 99) - (g.order.indexOf(b)+1 || 99)); else if(g.num) keys.sort((a,b) => a-b); else keys.sort();
+  const head = ["", "n", "Share", "Mean", "Median", "SD", "Variance (R² M)", "CV", "95% CI of mean", "P25", "P75", "Min", "Max", "Damaged", "Sold", "Price drop"];
+  const row = (label, ds, cls="") => { const x = describe(ds.map(priceOf)), n = ds.length;
+    const withA = ds.filter(d => d.asking_price && d.final_price);
+    return `<tr class="${cls}"><td>${esc(label)}</td><td>${n.toLocaleString()}</td><td>${pct(n/priced.length*100)}</td><td>${fmtR(x.mean)}</td><td>${fmtR(x.median)}</td>
+      <td>${fmtR(x.sd)}</td><td>${fmtM(x.v)}</td><td>${pct(x.cv,0)}</td><td class="${x.ci==null?"mut":""}">${x.ci==null ? "n too small" : fmtK(Math.max(0, Math.round(x.mean-x.ci)))+" – "+fmtK(Math.round(x.mean+x.ci))}</td>
+      <td>${fmtR(x.p25)}</td><td>${fmtR(x.p75)}</td><td>${fmtR(x.min)}</td><td>${fmtR(x.max)}</td>
+      <td>${pct(ds.filter(d => d.sevIdx>0).length/n*100,0)}</td><td>${pct(ds.filter(d => d.sold).length/n*100,0)}</td><td>${withA.length ? pct(withA.filter(d => d.final_price < d.asking_price).length/withA.length*100,0) : "–"}</td></tr>`; };
+  const unk = priced.filter(d => { const k = g.key(d); return k==null || k===""; });
+  document.getElementById("st-group").innerHTML = priced.length ? `<thead><tr>${head.map((h,i) => `<th>${i===0 ? g.label : h}</th>`).join("")}</tr></thead><tbody>`
+    + keys.map(k => row(g.fmt ? g.fmt(k) : k, bucket.get(k))).join("") + (unk.length ? row("Not stated", unk).replace("<tr", '<tr style="color:var(--fg-3)"') : "")
+    + row("All priced ads", priced, "tot") + `</tbody>` : `<tbody><tr><td class="empty">No priced listings match these filters.</td></tr></tbody>`;
+
+  // correlations
+  const t0 = Date.parse("2020-11-10");
+  const VARS = [
+    ["Geekbench multi-core", d => d.gb_multi && d.gb_multi/1000, "per 1k points"],
+    ["Geekbench single-core", d => d.gb_single && d.gb_single/100, "per 100 points"],
+    ["Geekbench Metal (GPU)", d => d.gb_metal && d.gb_metal/10000, "per 10k points"],
+    ["RAM", d => d.ram, "per GB"],
+    ["Storage", d => d.storage && d.storage/1024, "per TB"],
+    ["Chip generation (M1 = 1)", d => /^M\d$/.test(d.gen) ? +d.gen.slice(1) : null, "per generation"],
+    ["Battery health", d => d.battery_health, "per % point"],
+    ["Damage severity (0–5)", d => d.sevIdx, "per step"],
+    ["Date listed", d => (Date.parse(d.date)-t0)/31557600000, "per year"],
+  ];
+  const crow = ([name, f, unit]) => { const pts = priced.map(d => [f(d), priceOf(d)]).filter(([x]) => x!=null && x!==false && !isNaN(x));
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), pr = pearson(xs, ys), sp = pr ? pearson(ranks(xs), ranks(ys)) : null;
+    if(!pr) return `<tr><td>${name}</td><td>${pts.length}</td><td class="mut" colspan="5">not enough variation</td></tr>`;
+    return `<tr><td>${name}</td><td>${pts.length.toLocaleString()}</td><td>${num(pr.r)}</td><td>${pct(pr.r**2*100,0)}</td><td>${sp ? num(sp.r) : "–"}</td><td>${strength(pr.r)}</td>
+      <td>${pr.slope<0?"−":"+"}${fmtR(Math.abs(pr.slope))} ${unit}</td></tr>`; };
+  document.getElementById("st-corr").innerHTML = `<thead><tr><th>Variable</th><th>n</th><th>r</th><th>R²</th><th>ρ</th><th>Strength</th><th>Slope</th></tr></thead><tbody>${VARS.map(crow).join("")}</tbody>`;
+
+  // damage discount
+  const ref = {};
+  priced.filter(d => d.sevIdx===0).forEach(d => { (ref[d.chip+"|"+d.ram] ||= []).push(priceOf(d)); });
+  Object.keys(ref).forEach(k => ref[k] = ref[k].length>=2 ? median(ref[k]) : null);
+  const drows = SEV.map((s,i) => { const r = priced.filter(d => d.sevIdx===i && ref[d.chip+"|"+d.ram]).map(d => (priceOf(d)/ref[d.chip+"|"+d.ram]-1)*100); const x = describe(r);
+    if(!x.n) return `<tr><td>${s}</td><td>0</td><td class="mut" colspan="5">no comparable ads</td></tr>`;
+    return `<tr><td>${s}</td><td>${x.n}</td><td>${x.mean>0?"+":""}${pct(x.mean,0)}</td><td>${x.median>0?"+":""}${pct(x.median,0)}</td><td>${num(x.sd,0)} pp</td>
+      <td class="${x.ci==null?"mut":""}">${x.ci==null ? "–" : pct(x.mean-x.ci,0)+" – "+pct(x.mean+x.ci,0)}</td><td>${pct(r.filter(v => v<0).length/x.n*100,0)}</td></tr>`; });
+  document.getElementById("st-dmg").innerHTML = `<thead><tr><th>Severity</th><th>n</th><th>Mean</th><th>Median</th><th>SD</th><th>95% CI of mean</th><th>Priced below ref.</th></tr></thead><tbody>${drows.join("")}</tbody>`;
+
+  // composition
+  const batBand = v => v==null ? null : v>=95 ? "95–100%" : v>=90 ? "90–94%" : v>=85 ? "85–89%" : v>=80 ? "80–84%" : "Below 80%";
+  const COMP = [
+    ["Model", d => d.model, MODELS], ["Chip generation", d => d.gen, GENS], ["Chip tier", d => d.tier, TIERS],
+    ["RAM", d => d.ram ? d.ram+"GB" : null, RAMS.map(r => r+"GB")], ["Storage", d => d.storage ? stoTxt(d.storage) : null, STOS.map(stoTxt)],
+    ["Damage", d => SEV[d.sevIdx], SEV], ["Condition", d => d.condition || null, GROUPS.cond.order],
+    ["Battery health (where stated)", d => batBand(d.battery_health), ["95–100%","90–94%","85–89%","80–84%","Below 80%"]],
+    ["Seller", d => d.seller_type, ["Private","Reseller/Business"]], ["Ad type", d => d.type, TYPES],
+    ["Status", d => d.sold ? "Marked sold" : "Not marked sold", ["Marked sold","Not marked sold"]],
+    ["Year listed", d => d.date.slice(0,4), null],
+  ];
+  document.getElementById("st-comp").innerHTML = sale.length ? COMP.map(([title, f, order]) => {
+    const c = new Map(); let n = 0; sale.forEach(d => { const k = f(d); if(k==null) return; n++; c.set(k, (c.get(k)||0)+1); });
+    let ks = [...c.keys()]; ks.sort(order ? (a,b) => (order.indexOf(a)+1||99)-(order.indexOf(b)+1||99) : undefined);
+    const mx = Math.max(...c.values(), 1);
+    return `<div><h3>${title} <span class="note">n${n.toLocaleString()}</span></h3>` + ks.map(k => { const [p, lo, hi] = wilson(c.get(k), n);
+      return `<div class="cr" title="${esc(k)}: ${c.get(k)} of ${n} · ${pct(p)} (95% CI ${pct(lo)} – ${pct(hi)})"><span class="cl">${esc(k)}</span><span class="cb"><i style="width:${c.get(k)/mx*100}%"></i></span><span class="cp">${pct(p)}</span><span class="cn">±${num((hi-lo)/2,1)} · n${c.get(k)}</span></div>`; }).join("") + `</div>`;
+  }).join("") : `<div class="empty">No listings match these filters.</div>`;
+}
+buildGroupBy();
+
+function update(){
+  VIEW = DATA.filter(passes);
+  const active = Object.entries(F).filter(([k,s]) => s.size && !(k==="type" && [...s].sort().join()===[...DEFAULT_TYPES].sort().join())).length;
+  document.getElementById("fsum").innerHTML = `Showing <b>${VIEW.length.toLocaleString()}</b> of <b>${DATA.length.toLocaleString()}</b> listings. Wanted and feeler ads are hidden by default; turn them on under Ad type.${active?"":" "}`;
+  drawTiles(); drawCharts(); drawStats();
+}
+
+["f-from","f-to","f-pmin","f-pmax","f-bat","f-gbm","f-gbg"].forEach(id => document.getElementById(id).addEventListener("input", () => { page=0; update(); }));
+document.getElementById("reset").onclick = () => {
+  Object.keys(F).forEach(k => F[k].clear()); DEFAULT_TYPES.forEach(t => F.type.add(t));
+  ["f-from","f-to","f-pmin","f-pmax","f-bat","f-gbm","f-gbg"].forEach(id => document.getElementById(id).value = "");
+  buildFilters(); page=0; update();
+};
+const setPM = m => { priceMode = m; document.getElementById("pm-final").setAttribute("aria-pressed", m==="final"); document.getElementById("pm-ask").setAttribute("aria-pressed", m==="ask"); update(); };
+document.getElementById("pm-final").onclick = () => setPM("final");
+document.getElementById("pm-ask").onclick = () => setPM("ask");
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => drawCharts());
+new MutationObserver(() => drawCharts()).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+
+fetch("data.json").then(r => r.json()).then(j => {
+  DATA = j.listings.map(d => ({...d, sevIdx: Math.max(0, SEV.indexOf(d.damage_severity))}));
+  const ms = DATA.map(d => d.date).sort();
+  document.getElementById("srcline").innerHTML = `Scraped ${esc(j.scraped)} · ${DATA.length.toLocaleString()} listings · ${ms[0]} to ${ms[ms.length-1]}<br>Source: <a href="https://carbonite.co.za/index.php?forums/apple.90/" target="_blank" rel="noopener">carbonite.co.za forums</a>`;
+  document.getElementById("foot").innerHTML = esc(j.method) + " " + esc(j.privacy || "") + (j.benchmarks ? `<br><br>Benchmarks: ${esc(j.benchmarks.note)} Source: <a href="${esc(j.benchmarks.source)}" target="_blank" rel="noopener" style="color:var(--accent-ink)">Geekbench Mac Benchmarks</a>, fetched ${esc(j.benchmarks.fetched)}.` : "");
+  buildFilters(); update();
+}).catch(err => { document.getElementById("srcline").textContent = "Couldn't load data.json: " + err.message; });
+</script>

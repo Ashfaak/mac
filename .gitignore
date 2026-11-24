@@ -1,0 +1,5 @@
+# Private originals (seller usernames, locations, thread titles and links).
+# They drive the claude.ai artifact; build_public.py turns them into docs/.
+/index.html
+/listings.json
+__pycache__/
