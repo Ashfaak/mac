@@ -6,7 +6,7 @@ This is the public copy. It leaves out seller usernames, locations, thread title
 
 - `docs/index.html`: the page (Chart.js from cdnjs)
 - `docs/data.json`: 2,124 listings, stripped to specs, prices, damage and benchmark fields
-- `build_public.py` with `public_stats.*`: rebuilds `docs/` from the private originals, which are git-ignored
+- `build_public.py`: rebuilds `docs/` from the private originals (which hold the statistics code and are git-ignored)
 
 To view it locally, serve the folder (the page fetches `data.json`):
 

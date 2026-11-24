@@ -1,7 +1,7 @@
 """Build the public copy in docs/ from the private originals (index.html, listings.json).
 
 The public copy drops seller usernames, locations, thread titles/links, free-text notes and the
-per-listing table, and adds a statistics section. Run from this folder:  python build_public.py
+per-listing table. The statistics section is part of the original page and is kept. Run from this folder:  python build_public.py
 """
 import json, re, os
 
@@ -36,7 +36,7 @@ def rsub(pat, b):
     s = s2
 
 rep('<meta charset="utf-8">\n', '<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n')
-rep("then a dense sortable ledger. */", "then a statistics section. */")
+rep("then a statistics section and a dense sortable ledger. */", "then a statistics section. */")
 rep("and Geekbench scores.</p>",
     "and Geekbench scores. This public copy leaves out seller names, locations, thread titles and links, and the per-listing table.</p>")
 # text search (searched titles and notes, which are no longer published)
@@ -50,15 +50,12 @@ rep(" Click a dot to open the thread.</div>", "</div>")
 rsub(r'\n  o\.onClick = \(e, els\) => \{[^\n]*\n', "\n")
 rep("it[0].raw.d ? it[0].raw.d.title :", "it[0].raw.d ? lbl(it[0].raw.d) :", 2)
 rep("const esc = s =>", 'const lbl = d => [d.model, d.screen ? d.screen + "″" : "", d.chip].filter(Boolean).join(" · ");\nconst esc = s =>')
-# listings table -> statistics section
-STATS_HTML = open(os.path.join(HERE, "public_stats.html"), encoding="utf-8").read()
-STATS_JS = open(os.path.join(HERE, "public_stats.js"), encoding="utf-8").read()
-STATS_CSS = open(os.path.join(HERE, "public_stats.css"), encoding="utf-8").read()
-rsub(r'  <section class="ledger".*?</section>\n', STATS_HTML)
-rsub(r'function drawTable\(\)\{.*?document\.querySelectorAll\("#tbl th"\)\.forEach\(th => th\.onclick[^\n]*\n', STATS_JS)
-rep("drawTiles(); drawCharts(); drawTable();", "drawTiles(); drawCharts(); drawStats();")
+# remove the per-listing table (the statistics section already lives in the original page)
+rsub(r'\n  <section class="ledger".*?</section>\n', "\n")
+rsub(r'function drawTable\(\)\{.*?document\.querySelectorAll\("#tbl th"\)\.forEach\(th => th\.onclick[^\n]*\n', "")
+rep("drawStats(); drawTable();", "drawStats();")
 rep('document.getElementById("pgsize").onchange = () => { page=0; drawTable(); };\n', "")
-rsub(r'/\* ledger \*/.*?\.empty\{', "/* stats */\n" + STATS_CSS + "\n.empty{")
+rsub(r'/\* ledger \*/.*?\.empty\{', ".tw{overflow-x:auto}\n.empty{")
 rep('fetch("listings.json")', 'fetch("data.json")')
 rep("Couldn't load listings.json", "Couldn't load data.json")
 rep('esc(j.method) + (j.benchmarks', 'esc(j.method) + " " + esc(j.privacy || "") + (j.benchmarks')
